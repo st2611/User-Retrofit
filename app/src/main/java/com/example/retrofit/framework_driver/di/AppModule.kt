@@ -52,4 +52,4 @@ object AppModule {
 }
 
 const val BASE_URL = "http://192.168.0.102:3000/"
-
+//json-server Downloads/db.json --port 3000
