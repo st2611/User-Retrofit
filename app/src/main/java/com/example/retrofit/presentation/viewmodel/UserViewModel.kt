@@ -6,7 +6,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.retrofit.domain.model.User
-import com.example.retrofit.domain.repository.UserRepository
+import com.example.retrofit.domain.use_cases.UserUseCases
+import com.example.retrofit.presentation.event.UserEvent
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,7 +16,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class UserViewModel @Inject constructor(
-    private val userRepository: UserRepository
+    private val userUseCases: UserUseCases
 ) : ViewModel() {
     private val _users = MutableStateFlow<List<User>>(emptyList())
     val users: StateFlow<List<User>> = _users
@@ -26,15 +27,73 @@ class UserViewModel @Inject constructor(
     private val _email = mutableStateOf(" ")
     val email: State<String> = _email
 
+    private val _id = mutableStateOf(" ")
+    val id: State<String> = _id
+
 
     init {
         fetchUsers()
     }
 
+    fun onEvent(event: UserEvent) {
+
+        when (event) {
+            is UserEvent.DeleteUser -> {
+                viewModelScope.launch {
+                    Log.d("UserViewModel", "Id User Deleted: ${event.userId}")
+                    userUseCases.deleteUser(event.userId)
+                    fetchUsers()
+                }
+            }
+
+            is UserEvent.EnterId -> {
+                _id.value = event.id
+            }
+
+            is UserEvent.EnterEmail -> {
+                _email.value = event.email
+            }
+
+            is UserEvent.EnterName -> {
+                _name.value = event.name
+            }
+
+            is UserEvent.SaveUser -> {
+                viewModelScope.launch {
+                    val newUser = User(
+                        id = _id.value.trim().toInt(),
+                        name = _name.value.trim(),
+                        email = _email.value.trim()
+                    )
+                    userUseCases.createUser(newUser)
+                    _id.value = ""
+                    _name.value = ""
+                    _email.value = ""
+                    fetchUsers()
+                    Log.d(
+                        "UserViewModel",
+                        "Create New User: id = ${newUser.id}, name = ${newUser.name}, email = ${newUser.email}"
+                    )
+                }
+            }
+
+            is UserEvent.UpdateUser -> {
+                viewModelScope.launch {
+                    userUseCases.updateUser(event.id, event.user)
+                    _id.value = ""
+                    _name.value = ""
+                    _email.value = ""
+                    fetchUsers()
+                    Log.d("UserViewModel", "Update User")
+                }
+            }
+        }
+    }
+
     private fun fetchUsers() {
         viewModelScope.launch {
             try {
-                val userList = userRepository.getUsers()
+                val userList = userUseCases.getUsers()
                 _users.value = userList
                 Log.d("UserViewModel", "Users fetched: $userList")
             } catch (e: Exception) {
@@ -43,46 +102,9 @@ class UserViewModel @Inject constructor(
         }
     }
 
-//    fun addUser(user: User) {
-//        viewModelScope.launch {
-//            try {
-//                val newUser = userRepository.createUser(user)
-//                _users.value += newUser
-//                Log.d("UserViewModel","User added: $newUser")
-//            } catch (e: Exception) {
-//                Log.e("UserViewModel","Error adding user",e)
-//            }
-//        }
-//    }
-//
-//    fun updateUser(user: User) {
-//        val userId = user.id
-//        if (userId == null) {
-//            Log.e("UserViewModel", "Cannot update user: ID is null")
-//            return
-//        }
-//
-//        viewModelScope.launch {
-//            try {
-//                val updatedUser = userRepository.updateUser(userId, user)
-//                _users.value = _users.value.map { if (it.id == userId) updatedUser else it }
-//                Log.d("UserViewModel", "User updated: $updatedUser")
-//            } catch (e: Exception) {
-//                Log.e("UserViewModel", "Error updating user", e)
-//            }
-//        }
-//    }
-//
-//
-//    fun deleteUser(userId: Int) {
-//        viewModelScope.launch {
-//            try {
-//                userRepository.deleteUser(userId)
-//                _users.value = _users.value.filter { it.id != userId }
-//                Log.d("UserViewModel", "User deleted: $userId")
-//            } catch (e: Exception) {
-//                Log.e("UserViewModel", "Error deleting user", e)
-//            }
-//        }
-//    }
+    fun clearForm() {
+        onEvent(UserEvent.EnterId(""))
+        onEvent(UserEvent.EnterName(""))
+        onEvent(UserEvent.EnterEmail(""))
+    }
 }

@@ -26,14 +26,15 @@ fun UserItem(user: User, onUpdate: (User) -> Unit, onDelete: (Int) -> Unit) {
         elevation = CardDefaults.cardElevation(4.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = user.name, style = MaterialTheme.typography.bodyLarge)
-            Text(text = user.email, style = MaterialTheme.typography.bodyMedium)
+            Text(text = user.id.toString(), style = MaterialTheme.typography.bodyLarge)
+            Text(text = user.name, style = MaterialTheme.typography.bodyMedium)
+            Text(text = user.email, style = MaterialTheme.typography.bodySmall)
             Row {
                 Button(onClick = { onUpdate(user.copy(name = "Updated Name")) }) {
                     Text("Update")
                 }
                 Spacer(modifier = Modifier.width(8.dp))
-                Button(onClick = { onDelete(user.id) }) {
+                Button(onClick = { user.id?.let { onDelete(it) } }) {
                     Text("Delete")
                 }
             }
